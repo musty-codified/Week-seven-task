@@ -1,12 +1,10 @@
 package com.week8.activitytrackerappws.enums;
 
-public class Status {
-
+public enum Status {
 
     PENDING,
 
     IN_PROGRESS,
 
     DONE
-
 }

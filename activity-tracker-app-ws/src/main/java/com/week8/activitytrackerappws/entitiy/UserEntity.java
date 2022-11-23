@@ -2,9 +2,12 @@ package com.week8.activitytrackerappws.entitiy;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -31,5 +34,11 @@ public class UserEntity {
     @Column(name = "password", nullable = false)
     private String password;
 
+    @OneToMany(mappedBy = "users", cascade = CascadeType.ALL)
+
+
+
+    @ToString.Exclude
+    private final List<TaskEntity> tasks = new ArrayList<>();
 
 }
