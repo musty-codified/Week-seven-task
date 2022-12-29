@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class ActivityTrackerAppWsApplication {
 
     public static void main(String[] args) {
+
         SpringApplication.run(ActivityTrackerAppWsApplication.class, args);
     }
 

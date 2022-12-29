@@ -1,11 +1,12 @@
 package com.week8.activitytrackerappws.service.impl;
 
 import com.week8.activitytrackerappws.dto.TaskDto;
-import com.week8.activitytrackerappws.entitiy.TaskEntity;
-import com.week8.activitytrackerappws.entitiy.UserEntity;
+import com.week8.activitytrackerappws.exception.ErrorMessages;
+import com.week8.activitytrackerappws.model.TaskEntity;
+import com.week8.activitytrackerappws.model.UserEntity;
 import com.week8.activitytrackerappws.enums.Status;
+import com.week8.activitytrackerappws.exception.UserServiceException;
 import com.week8.activitytrackerappws.exception.BadRequestException;
-import com.week8.activitytrackerappws.exception.NotFoundException;
 import com.week8.activitytrackerappws.repository.TaskRepository;
 import com.week8.activitytrackerappws.repository.UserRepository;
 import com.week8.activitytrackerappws.service.TaskService;
@@ -18,30 +19,37 @@ import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.week8.activitytrackerappws.enums.Status.PENDING;
+
 @Service
 @RequiredArgsConstructor
+
 public class TaskServiceImpl implements TaskService {
-    @Autowired
-    TaskRepository taskRepository;
-    @Autowired
-    UserRepository userRepository;
+//    @Autowired
+   private final TaskRepository taskRepository;
+
+//    @Autowired
+   private final UserRepository userRepository;
     @Override
-    public void createTask(Long userId, TaskDto taskDto) {
+    public TaskEntity createTask(Long userId, TaskDto taskDto) {
         UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new BadRequestException("User not found"));
         TaskEntity taskEntity = new TaskEntity();
         taskEntity.setTitle(taskDto.getTitle());
         taskEntity.setDescription(taskDto.getDescription());
+        taskEntity.setStatus(PENDING);
+        taskEntity.setCreatedAt(LocalDateTime.now());
         taskEntity.setUserEntity(userEntity);
-        taskRepository.save(taskEntity);
+        return taskRepository.save(taskEntity);
     }
 
 
     @Override
     public List<TaskDto> getAllTasks(Long userId) {
         UserEntity userEntity = userRepository.findById(userId).
-                orElseThrow(()->new NotFoundException(("User not found"));
-        List<TaskEntity> tasks = taskRepository.findTasksByUser(userEntity);
+                orElseThrow(()->new BadRequestException((ErrorMessages.NO_RECORD_FOUND.getErrorMessage())));
+        List<TaskEntity> tasks = taskRepository.findByUserEntity(userEntity);
         List<TaskDto> taskDtoList = new ArrayList<>();
 
         tasks.forEach(task -> {
@@ -56,10 +64,10 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public TaskDto getTask(Long studentId, Long taskId) {
         UserEntity userEntity = userRepository.findById(studentId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new BadRequestException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-        TaskEntity taskEntity = taskRepository.findTaskByIdAndStudent(taskId, userEntity)
-                .orElseThrow(() -> new NotFoundException("Task Not Found"));
+        TaskEntity taskEntity = taskRepository.findByIdAndUserEntity(taskId, userEntity)
+                .orElseThrow(() -> new BadRequestException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
         TaskDto taskDto = new TaskDto();
         BeanUtils.copyProperties(taskEntity, taskDto);
@@ -68,13 +76,13 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskDto> getTasksByStatus(Long studentId, String status) {
+    public List<TaskDto> getTasksByStatus(Long userId, String status) {
         Status statusCheck = checkStatus(status);
 
-        UserEntity userEntity = userRepository.findById(studentId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+        UserEntity userEntity = userRepository.findById(userId)
+                .orElseThrow(() -> new BadRequestException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-        List<TaskEntity> tasks = taskRepository.findTaskByStatusAndStudent(statusCheck, userEntity);
+        List<TaskEntity> tasks = taskRepository.findByStatusAndUserEntity(statusCheck, userEntity);
 
         List<TaskDto> taskDtoList = new ArrayList<>();
 
@@ -91,10 +99,10 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public TaskDto updateTaskStatus(Long userId, Long taskId, String status) {
         UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new BadRequestException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-        TaskEntity taskEntity = taskRepository.findTaskByIdAndStudent(taskId, userEntity)
-                .orElseThrow(() -> new NotFoundException("Task Not Found"));
+        TaskEntity taskEntity = taskRepository.findByIdAndUserEntity(taskId, userEntity)
+                .orElseThrow(() -> new BadRequestException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
         Status statusCheck = checkStatus(status);
 
@@ -114,46 +122,49 @@ public class TaskServiceImpl implements TaskService {
 
             return taskDto;
 
-
     }
-
 
     @Override
     @Transactional
     public TaskDto updateTask(Long userId, Long taskId, String title, String description) {
 
         UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new BadRequestException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-        TaskEntity taskEntity = taskRepository.findTaskByIdAndStudent(taskId, userEntity)
-                .orElseThrow(() -> new NotFoundException("Task Not Found"));
+        TaskEntity taskEntity = taskRepository.findByIdAndUserEntity(taskId, userEntity)
+                .orElseThrow(() -> new BadRequestException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
+
+        System.out.println("title->" + title);
 
         if(title != null && title.length() > 0 && !title.equals(taskEntity.getTitle())){
+            System.out.println("updating task");
             taskEntity.setTitle(title);
             taskEntity.setUpdatedAt(LocalDateTime.now());
         }
 
         if(description != null && description.length() > 0 && !description.equals(taskEntity.getDescription())){
+            System.out.println("updating desc");
             taskEntity.setDescription(description);
-            taskEntity.setUpdatedAt(LocalDateTime.now());
+            taskEntity.setUpdatedAt( LocalDateTime.now());
         }
-
+        System.out.println(taskEntity);
         TaskDto taskDto = new TaskDto();
         BeanUtils.copyProperties(taskEntity, taskDto);
 
+        System.out.println(taskDto);
         return taskDto;
     }
 
     @Override
-    public void deleteTask(Long studentId, Long taskId) {
-            UserEntity userEntity = userRepository.findById(studentId)
-                    .orElseThrow(() -> new NotFoundException("User not found"));
+    public void deleteTask(Long userId, Long taskId) {
+            UserEntity userEntity = userRepository.findById(userId)
+                    .orElseThrow(() -> new BadRequestException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage()));
 
-            taskRepository.findTaskByIdAndStudent(taskId, userEntity)
+            taskRepository.findByIdAndUserEntity(taskId, userEntity)
                     .ifPresentOrElse(
                             taskRepository::delete,
                             () -> {
-                                throw new NotFoundException("Task Not Found");
+                                throw new BadRequestException(ErrorMessages.NO_RECORD_FOUND.getErrorMessage());
                             });
 
         }
@@ -162,13 +173,13 @@ public class TaskServiceImpl implements TaskService {
             Status statusCheck;
 
             if(status.equalsIgnoreCase("pending")){
-                statusCheck = Status.PENDING;
+                statusCheck = PENDING;
             } else if (status.equalsIgnoreCase("in_progress")) {
                 statusCheck = Status.IN_PROGRESS;
             } else if (status.equalsIgnoreCase("done")){
                 statusCheck = Status.DONE;
             } else {
-                throw new BadRequestException("Invalid Status");
+                throw new UserServiceException("Invalid Status");
             }
 
             return statusCheck;
